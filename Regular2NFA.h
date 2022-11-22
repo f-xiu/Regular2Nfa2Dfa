@@ -1,6 +1,37 @@
 #pragma once
 #include <iostream>
-#include "NFA.h"
+#include <fstream>
+#include <stack>
+#include <vector>
+#include <string>
+#define MAX 100
+using namespace std;
+
+// NFA边
+struct Edge
+{
+	int start;
+	int end;
+	char accept;
+};
+
+// NFA单元，一个大的NFA单元可以是由很多小单元通过规则拼接起来
+class grup
+{
+public:
+	vector<Edge> Edges; //这个NFA拥有的边
+	int stateCount;		//状态数
+	int StartState;		//开始状态
+	int EndState;		//结束状态
+public:
+	grup()
+	{
+		this->stateCount = 2;
+		this->StartState = 0;
+		this->EndState = 1;
+	}
+};
+
 
 /* ------------输入正规式------------ */
 // 输入正规式
@@ -34,26 +65,7 @@ int isp(char c);
 // icp
 int icp(char c);
 
-/* ------------正规式生成NFA------------ */
-// 正规式生成nfa
-cell regex_to_nfa(const string& regex);
+//根据正规式获得NFA
+grup getNFA(string text);
 
-// 初始化节点
-// 主要用于根据读入字符生成一个节点
-cell init_cell(char ch);
-
-// 或运算(a|b)
-cell unite_cell(const cell& Left, const cell& Right);
-
-// 与运算(ab)
-cell join_cell(const cell& Left, const cell& Right);
-
-// 闭包运算(a*)
-cell loop_cell(const cell& Left);
-
-// 将c2中的边拷贝到c1
-void copy_cell(cell& c1, const cell& c2);
-
-
-// 将NFA_cell转为矩阵形式
-Matrix cell2matrix(const cell& nfa_cell);
+void printNFA(grup out);

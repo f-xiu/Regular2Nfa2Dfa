@@ -14,17 +14,26 @@ Matrix cell2matrix(const cell& nfa_cell)
 	Matrix matrix;
 	matrix.edgeCount = 0;
 	auto end_iter = nfa_cell.EndNodeSet.begin();
+	int maxName = (*end_iter).Name;
+	for (++end_iter; end_iter != nfa_cell.EndNodeSet.end(); end_iter++)
+	{
+		if ((*end_iter).Name > maxName)
+		{
+			maxName = (*end_iter).Name;
+		}
+	}
 
 	//结点数量同cellnode
 	//matrix.nodeCount = maxName - 65 + 1; // 统计字母数量
 	matrix.nodeCount = nfa_cell.NodeCount;
 	// 初始化矩阵节点名称
 	matrix.vertex.resize(matrix.nodeCount);
-	for (i = 0;i < matrix.nodeCount;i++)
+	matrix.vertex[0] = 'X';
+	matrix.vertex[1] = 'Y';
+	for (i = 2;i < matrix.nodeCount;i++)
 	{
-		matrix.vertex[i] = nfa_cell.vertex[i];
+		matrix.vertex[i] = '0' + i - 2;
 	}
-	//matrix.vertex = nfa_cell.vertex;
 
 	// 初始化二维矩阵
 	matrix.transet.resize(matrix.nodeCount);
@@ -41,11 +50,11 @@ Matrix cell2matrix(const cell& nfa_cell)
 	}
 	matrix.StartNode = nfa_cell.StartNode;
 	matrix.EndNodeSet = nfa_cell.EndNodeSet;
-	for (node n : matrix.EndNodeSet) {
+	for (node n : nfa_cell.EndNodeSet) {
 		matrix.EndSet.insert(n.Name);
 	}
-	matrix.transchar = nfa_cell.transchar;
 
+	matrix.transchar = nfa_cell.transchar;
 
 	for (i = 0; i < nfa_cell.EdgeCount; i++)
 	{
@@ -70,6 +79,7 @@ Matrix cell2matrix(const cell& nfa_cell)
 
 	return matrix;
 }
+
 
 // 找到节点在矩阵名称中的位置，返回下标
 int find_index_in_vertex(const Matrix& matrix, char ch)
@@ -188,4 +198,11 @@ void printDfa(const Matrix &dfa, unordered_map<int, string>&map) {
 			out(dfa, k, map);
 		}
 	}
+	cout << "start:" << dfa.StartNode.Name << endl;;
+	cout << "end:";
+	for (int end = 0;end < dfa.nodeCount;end++) {
+		if (dfa.EndSet.find(dfa.vertex[end]) == dfa.EndSet.end())continue;
+		cout << map[end] << " ";
+	}
+	cout << endl;
 }

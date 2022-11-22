@@ -258,246 +258,203 @@ int icp(char c)
 // 采用Thompson算法构建整个NFA，
 // 对不同的操作符，需要不同数量的运算数，因此a|b、ab、a*、a操作需分别用函数实现
 
-char STATE_NAME = 65; // 定义NFA中节点的名称，从A开始
 
-cell regex_to_nfa(const string& regex)
+grup getNFA(string text)
 {
-	int i, flag = 0;
-	char ch;
-	set<char> transchar; // 记录转换字符
-	cell NFA, Cell, Left, Right;
-	// NFA：最终结果
-	// Cell：临时变量
-	// Left：左操作符
-	// Right：右操作符
-	stack<cell> s;
-	for (i = 0; i < regex.length(); i++)
+	stack<grup> s;
+	for (int i = 0; i < int(text.length()); i++)
 	{
-		ch = regex[i];
-		switch (ch)
+		if ((text[i] <= 'z' && text[i] >= 'a') || (text[i] <= 'Z' && text[i] >= 'A') || (text[i] <= '9' && text[i] >= '0'))
 		{
-		case '|':
-		{
-			Right = s.top();
-			s.pop();
-			Left = s.top();
-			s.pop();
-			Cell = unite_cell(Left, Right);
-			s.push(Cell);
-			break;
+			grup tempG;
+			Edge tempE;
+			tempE.accept = text[i];
+			tempE.start = 0;
+			tempE.end = 1;
+			tempG.Edges.push_back(tempE);
+			s.push(tempG);
 		}
-		case '*':
+		else
 		{
-			Left = s.top();
-			s.pop();
-			Cell = loop_cell(Left);
-			s.push(Cell);
-			break;
-		}
-		case '+':
-		{
-			Right = s.top();
-			s.pop();
-			Left = s.top();
-			s.pop();
-			Cell = join_cell(Left, Right);
-			s.push(Cell);
-			break;
-		}
-		default:
-			Cell = init_cell(ch);
-			s.push(Cell);
-			if (ch != '#')
-				transchar.insert(ch); // set会首先检测是否存在，只有当不存在时才会插入
-			break;
+			if (text[i] == '+')
+			{
+				grup tempG2 = s.top();
+				s.pop();
+				grup tempG1 = s.top();
+				s.pop();
+				//图和图合成
+				grup tempG = tempG1;
+				tempG.stateCount = tempG1.stateCount + tempG2.stateCount - 1;
+				tempG.StartState = 0;
+				tempG.EndState = tempG.stateCount - 1;
+				//获取后一条边
+				for (int i = 0; i < int(tempG2.Edges.size()); i++)
+				{
+					Edge e2 = tempG2.Edges[i];
+					e2.start += tempG1.stateCount - 1;
+					e2.end += tempG1.stateCount - 1;
+					tempG.Edges.push_back(e2);
+				}
+				//合成图压栈
+				s.push(tempG);
+			}
+			else if (text[i] == '*')
+			{
+				grup tempG2 = s.top();
+				s.pop();
+				grup tempG;
+				if (tempG2.StartState != tempG2.EndState)
+				{
+					tempG.stateCount = tempG2.stateCount + 1;
+				}
+				else
+				{
+					tempG.stateCount = tempG2.stateCount + 2;
+				}
+				tempG.EndState = tempG.stateCount - 1;
+				//图内的边编号加1
+				for (int i = 0; i < int(tempG2.Edges.size()); i++)
+				{
+					Edge e2 = tempG2.Edges[i];
+					if (e2.end == tempG2.EndState)
+					{
+						e2.start += 1;
+						e2.end = e2.start;
+					}
+					else
+					{
+						e2.start += 1;
+						e2.end += 1;
+					}
+					tempG.Edges.push_back(e2);
+				}
+				//添加两条边
+				Edge e1;
+				e1.accept = '~';
+				e1.start = 0;
+				e1.end = 1;
+				Edge e2;
+				e2.accept = '~';
+				e2.start = tempG.EndState - 1;
+				e2.end = e2.start + 1;
+				tempG.Edges.push_back(e1);
+				tempG.Edges.push_back(e2);
+				//合成图压栈
+				s.push(tempG);
+			}
+			else if (text[i] == '|')
+			{
+				grup tempG2 = s.top();
+				s.pop();
+				grup tempG1 = s.top();
+				s.pop();
+				grup tempG;
+				tempG.StartState = 0;
+				tempG.EndState = 0;
+				tempG.stateCount = tempG1.stateCount + tempG2.stateCount - 3;
+				for (int i = 0; i < int(tempG1.Edges.size()); i++)
+				{
+					Edge e1 = tempG1.Edges[i];
+					if (e1.end == tempG1.EndState)
+					{
+						e1.end = 0;
+					}
+					tempG.Edges.push_back(e1);
+				}
+				for (int i = 0; i < int(tempG2.Edges.size()); i++)
+				{
+					Edge e2 = tempG2.Edges[i];
+					if (e2.end == tempG2.EndState)
+					{
+						e2.end = 0;
+					}
+					tempG.Edges.push_back(e2);
+				}
+				//合成图压栈
+				s.push(tempG);
+			}
 		}
 	}
-	NFA = s.top();
-	s.pop();
-	NFA.transchar = transchar;
-	STATE_NAME = 65; // 将计数器重置，方便再次调用
-	NFA.vertex = "";
-	set<char>nodeset;
-	for (int i = 0;i < NFA.EdgeCount;i++) {
-		char start = NFA.EdgeSet[i].Start.Name;
-		char end = NFA.EdgeSet[i].End.Name;
-		if (nodeset.find(start)==nodeset.end()) {
-			nodeset.insert(start);
-			NFA.vertex += start;
-		}
-		if (nodeset.find(end) == nodeset.end()) {
-			nodeset.insert(end);
-			NFA.vertex += end;
-		}
-	}
-	NFA.NodeCount = NFA.vertex.size();
-	return NFA;
+	return s.top();
 }
 
-// 初始化节点
-cell init_cell(char ch)
+void printNFA(grup out)
 {
-	edge newEdge;
-	newEdge.Start.Name = STATE_NAME++;
-	newEdge.End.Name = STATE_NAME++;
-	newEdge.transchar = ch;
+	ofstream fout;
+	fout.open("./nfa.txt");
 
-	cell newCell;
-	newCell.EdgeCount = 0;
-	newCell.EdgeSet.push_back(newEdge);
-	newCell.EdgeCount++;
-	newCell.StartNode = newEdge.Start;
-	newCell.EndNodeSet.push_back(newEdge.End);
-	return newCell;
-}
-
-// 或运算(a|b)
-// 一共需要添加两个节点，四条边
-// 新开始节点指向Left/Right开始节点，Left/Right终止节点指向新终止节点
-cell unite_cell(const cell& Left, const cell& Right)
-{
-	cell newCell;
-	newCell.EdgeCount = 0;
-	newCell.StartNode.Name = STATE_NAME++;
-	node newEnd;
-	newEnd.Name = STATE_NAME++;
-	newCell.EndNodeSet.push_back(newEnd);
-
-	edge edge1, edge2, edge3, edge4;
-	// 新开始节点指向Left开始节点
-	edge1.Start = newCell.StartNode;
-	edge1.End = Left.StartNode;
-	edge1.transchar = '#';
-
-	// 新开始节点指向Right开始节点
-	edge2.Start = newCell.StartNode;
-	edge2.End = Right.StartNode;
-	edge2.transchar = '#';
-
-	// Left终止节点指向新终止节点
-	edge3.Start = Left.EndNodeSet[0];
-	edge3.End = newCell.EndNodeSet[0];
-	edge3.transchar = '#';
-
-	// Left终止节点指向新终止节点
-	edge4.Start = Right.EndNodeSet[0];
-	edge4.End = newCell.EndNodeSet[0];
-	edge4.transchar = '#';
-
-	// 将Left和Right的EdgeSet复制到NewCell
-	copy_cell(newCell, Left);
-	copy_cell(newCell, Right);
-
-	// 将新增的边加入
-	newCell.EdgeSet.push_back(edge1);
-	newCell.EdgeSet.push_back(edge2);
-	newCell.EdgeSet.push_back(edge3);
-	newCell.EdgeSet.push_back(edge4);
-	newCell.EdgeCount += 4;
-
-	return newCell;
-}
-
-// 与运算(a+b)
-// Left的结束状态与Right的开始状态合并
-cell join_cell(const cell& in_Left, const cell& in_Right)
-{
-	// 我们需要将四个节点合并成三个(A-a-B，C-b-D → A-a-B-b-D)
-	// 即Left的结束状态和Right的开始状态合并，并将Right中其他的边复制给Left，最后返回Left
-	cell result(in_Left), Right(in_Right);
-
-	int i;
-	// 首先做合并处理
-	for (i = 0; i < Right.EdgeCount; i++)
+	fout << "X ";
+	for (int j = 0; j < int(out.Edges.size()); j++)
 	{
-		// Right的开始状态与Left的结束状态合并
-		if (Right.EdgeSet[i].Start.Name == Right.StartNode.Name)
+		Edge eX = out.Edges[j];
+		if (eX.start == 0)
 		{
-			Right.EdgeSet[i].Start = in_Left.EndNodeSet[0];
-			// STATE_NAME--;
-		}
-		else if (Right.EdgeSet[i].End.Name == Right.StartNode.Name)
-		{
-			Right.EdgeSet[i].End = in_Left.EndNodeSet[0];
-			// STATE_NAME--;
-		}
-
-		// 将Right的终止结点前移
-		if (Right.EdgeSet[i].End.Name == Right.EndNodeSet[0].Name)
-		{
-			Right.EdgeSet[i].End.Name -= 1;
-		}
-		if (Right.EdgeSet[i].Start.Name == Right.EndNodeSet[0].Name)
-		{
-			Right.EdgeSet[i].Start.Name -= 1;
+			fout << "X-" << eX.accept << "->";
+			if (eX.end == out.stateCount - 1)
+			{
+				fout << "Y ";
+			}
+			else
+			{
+				fout << eX.end - 1 << " ";
+			}
 		}
 	}
-	Right.StartNode = in_Left.EndNodeSet[0];
-	Right.EndNodeSet[0].Name -= 1;
-	STATE_NAME--;
-
-	// 然后做边复制的操作
-	copy_cell(result, Right);
-
-	result.EndNodeSet = Right.EndNodeSet;
-	return result;
-}
-
-// 闭包运算(a*)
-// 一共需要添加两个节点，四条边。
-// 新开始节点指向原开始结点，原终止结点指向新终止节点，原终止节点指向原开始节点的边，新开始结点指向新终止节点
-cell loop_cell(const cell& Left)
-{
-	cell newCell;
-	newCell.EdgeCount = 0;
-	newCell.StartNode.Name = STATE_NAME++;
-	node newEnd;
-	newEnd.Name = STATE_NAME++;
-	newCell.EndNodeSet.push_back(newEnd);
-
-	edge edge1, edge2, edge3, edge4;
-	// 新开始节点指向原开始结点
-	edge1.Start = newCell.StartNode;
-	edge1.End = Left.StartNode;
-	edge1.transchar = '#';
-
-	// 原终止结点指向新终止节点
-	edge2.Start = Left.EndNodeSet[0];
-	edge2.End = newCell.EndNodeSet[0];
-	edge2.transchar = '#';
-
-	// 原终止节点指向原开始节点的边
-	edge3.Start = Left.EndNodeSet[0];
-	edge3.End = Left.StartNode;
-	edge3.transchar = '#';
-
-	// 新开始结点指向新终止节点
-	edge4.Start = newCell.StartNode;
-	edge4.End = newCell.EndNodeSet[0];
-	edge4.transchar = '#';
-
-	// 将原来的边复制过来
-	copy_cell(newCell, Left);
-	// 添加新增的四条边
-	newCell.EdgeSet.push_back(edge1);
-	newCell.EdgeSet.push_back(edge2);
-	newCell.EdgeSet.push_back(edge3);
-	newCell.EdgeSet.push_back(edge4);
-	newCell.EdgeCount += 4;
-
-	return newCell;
-}
-
-// 将c2中的边拷贝到c1
-void copy_cell(cell& c1, const cell& c2)
-{
-	int i;
-	c1.EdgeSet.resize(c1.EdgeCount + c2.EdgeCount);
-	for (i = 0; i < c2.EdgeCount; i++)
+	fout << endl;
+	fout << "Y ";
+	for (int j = 0; j < int(out.Edges.size()); j++)
 	{
-		c1.EdgeSet[c1.EdgeCount + i] = c2.EdgeSet[i];
+		Edge eX = out.Edges[j];
+		if (eX.start == out.stateCount - 1)
+		{
+			fout << "Y-" << eX.accept << "->";
+			if (eX.end == out.stateCount - 1)
+			{
+				fout << "Y ";
+			}
+			else
+			{
+				fout << eX.end - 1 << " ";
+			}
+		}
 	}
-	c1.EdgeCount += c2.EdgeCount;
+	fout << endl;
+	for (int i = 1; i < out.stateCount - 1; i++)
+	{
+		fout << i - 1 << " ";
+		for (int j = 0; j < int(out.Edges.size()); j++)
+		{
+			Edge e = out.Edges[j];
+			if (e.start == i && e.accept == '~')
+			{
+				fout << e.start - 1 << "-" << e.accept << "->";
+				if (e.end == out.stateCount - 1)
+				{
+					fout << "Y ";
+				}
+				else
+				{
+					fout << e.end - 1 << " ";
+				}
+			}
+		}
+		for (int j = 0; j < int(out.Edges.size()); j++)
+		{
+			Edge e = out.Edges[j];
+			if (e.start == i && e.accept != '~')
+			{
+				fout << e.start - 1 << "-" << e.accept << "->";
+				if (e.end == out.stateCount - 1)
+				{
+					fout << "Y ";
+				}
+				else
+				{
+					fout << e.end - 1 << " ";
+				}
+			}
+		}
+		fout << endl;
+	}
+	fout.close();
 }
-
-// 重载输出cell

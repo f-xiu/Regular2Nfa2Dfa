@@ -25,7 +25,7 @@ Matrix DFA_minimize(const Matrix& dfa, std::unordered_map<int, string>& map)
 			two = *(a.begin()) < *(b.begin());
 		}
 		return two;
-		});
+	});
 
 
 	// groups中获得了新节点数，先初始化dfa_min的节点信息
@@ -38,7 +38,7 @@ Matrix DFA_minimize(const Matrix& dfa, std::unordered_map<int, string>& map)
 	for (int i = 0;i < groups.size();i++) {
 		string tm = "";
 		if (groups[i].size() == 1)dfa_min.vertex[i] = *(groups[i].begin());
-		else dfa_min.vertex[i] = 'A' + i;
+		else dfa_min.vertex[i] = '0' + i;
 		tm += dfa_min.vertex[i];
 		map.insert({ i,tm });
 	}
